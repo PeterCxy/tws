@@ -1,0 +1,23 @@
+{
+  "name": "tws",
+  "version": "1.0.0",
+  "description": "TCP over WebSocket",
+  "main": "index.js",
+  "repository": "https://github.com/PeterCxy/tws.git",
+  "author": "PeterCxy",
+  "license": "GPL-3.0",
+  "private": false,
+  "scripts": {
+    "build": "coffee --transpile -o lib -c src"
+  },
+  "dependencies": {
+    "winston": "^3.0.0-rc1",
+    "ws": "^3.3.3"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "coffeescript": "^2.1.1"
+  }
+}
