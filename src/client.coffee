@@ -22,6 +22,7 @@ randomSocket = ->
 serverConnection = (index, server, passwd, targetHost, targetPort) ->
   connectCallbacks = {} # The `resolve` function of the promises of creating new connections.
   closeCallbacks = {} # The callbacks for closing connections
+  dataCallbacks = {} # Callbacks for incoming data
   connect = -> # Create a new logical connection
     [connId, packet] = await protocol.buildConnectPacket passwd
     logger.info "Creating connection #{connId}"
@@ -39,6 +40,10 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
     closeCallbacks[connId] = ->
       delete closeCallbacks[connId]
       callback()
+  send = (connId, buf) ->
+    wsPool[index].send protocol.buildPayloadPacket connId, buf
+  onData = (connId, callback) -> # Call `callback` upon receiving data for the logical connection
+    dataCallbacks[connId] = callback
 
   wsPool[index] = new WebSocket server
   wsPool[index].on 'open', ->
@@ -49,9 +54,18 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
     wsFunctions[index] = {
       connect: connect,
       close: close,
-      onClose: onClose
+      onClose: onClose,
+      onData: onData,
+      send: send
     }
   wsPool[index].on 'message', (msg) ->
+    # Test if this is a payload message
+    payload = protocol.parsePayloadPacket msg
+    if payload?
+      [connId, buf] = payload
+      logger.info "Received packet from #{connId} with length #{buf.length}"
+      dataCallbacks[connId] buf if dataCallbacks[connId]?
+
     # Test if this is a connect-response message signaling state of connection
     connectResp = protocol.parseConnectResponsePacket msg
     if connectResp?
@@ -63,7 +77,7 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
       else
         if connectCallbacks[connId]?
           connectCallbacks[connId](false)
-        if closeCallbacksp[connId]?
+        if closeCallbacks[connId]?
           closeCallbacks[connId]()
 
 localServer = (localPort) ->
@@ -79,12 +93,16 @@ localConnection = (client) ->
     client.end()
 
   # Wait for server's request to close connection
-  wsFunctions[socketId].onClose -> client.end()
+  wsFunctions[socketId].onClose connId, -> client.end()
+  wsFunctions[socketId].onData connId, (buf) -> client.write buf
   
   onClose = ->
     logger.info "Tearing down connection #{connId}"
-    wsFunctions[socketId].close connId
+    wsFunctions[socketId].close connId if wsFunctions[socketId]?
   client.once 'close', onClose
   client.once 'error', onClose
+  client.on 'data', (buf) ->
+    logger.info "Sending data of length #{buf.length} from #{connId}"
+    wsFunctions[socketId].send connId, buf
 
 clientMain()

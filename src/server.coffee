@@ -24,6 +24,14 @@ clientConnection = (passwd) -> (conn) ->
       logger.info "Client tunneling to #{targetHost}:#{targetPort}"
       stage = 1
     else if stage = 1 # handshaked
+      # Test if it is a payload packet
+      payload = protocol.parsePayloadPacket msg
+      if payload?
+        [connId, buf] = payload
+        logger.info "Packet sent from #{connId} with length #{buf.length}"
+        #console.log buf.toString('utf-8')
+        proxyConns[connId].write buf if proxyConns[connId]?
+        return
       # Test if it is a connect-response packet
       # In this case, it must be a packet requesting
       # to close a connection
@@ -50,6 +58,9 @@ clientConnection = (passwd) -> (conn) ->
         socket.once 'connect', ->
           proxyConns[connId] = socket
           conn.send protocol.buildConnectResponsePacket connId, true
+        socket.on 'data', (buf) ->
+          logger.info "Packet received from #{connId} with length #{buf.length}"
+          conn.send protocol.buildPayloadPacket connId, buf
       #conn.send 'CONNECTION CREATED'
 
 #remoteConnection = (connId, wsConn, targetHost, targetPort, onConnect, onError) ->
