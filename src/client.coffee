@@ -79,16 +79,19 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
     # handshake
     wsPool[index].send await protocol.buildHandshakePacket passwd, targetHost, targetPort
 
-    # Expose the functions for calling from local TCP server
-    wsFunctions[index] = {
-      connect: connect,
-      close: close,
-      onClose: onClose,
-      onData: onData,
-      send: send
-    }
-
   wsPool[index].on 'message', (msg) ->
+    if not wsFunctions[index]?
+      # The connection is now activated
+      # Expose the functions for calling from local TCP server
+      wsFunctions[index] = {
+        connect: connect,
+        close: close,
+        onClose: onClose,
+        onData: onData,
+        send: send
+      }
+      return
+
     # Test if this is a payload message
     payload = protocol.parsePayloadPacket msg
     if payload?

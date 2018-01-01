@@ -2,6 +2,7 @@ import * as net from 'net'
 import WebSocket from 'ws'
 import { logger } from './log'
 import * as protocol from './protocol'
+import { randomInt } from './util'
 
 wss = null
 
@@ -26,6 +27,9 @@ clientConnection = (passwd) -> (conn) ->
         conn.close 1002
         return
       [targetHost, targetPort] = target
+
+      # Send anything back to client to activate this connection
+      conn.send('' + randomInt())
       logger.info "Client tunneling to #{targetHost}:#{targetPort}"
       stage = 1
     else if stage = 1 # handshaked
