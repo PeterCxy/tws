@@ -4,12 +4,14 @@ import { logger } from './log'
 import * as protocol from './protocol'
 import { randomInt } from './util'
 
-wsPool = new Array(32)
-wsFunctions = new Array(32)
+CONNECTION_COUNT = 2
+
+wsPool = new Array(CONNECTION_COUNT)
+wsFunctions = new Array(wsPool.length)
 
 clientMain = ->
-  [0..31].forEach (index) ->
-    serverConnection index, 'ws://127.0.0.1:23356', 'testpasswd', '220.181.57.217', 80
+  [0..(CONNECTION_COUNT - 1)].forEach (index) ->
+    serverConnection index, 'ws://127.0.0.1:23356', 'testpasswd', '118.178.213.186', 80
   localServer 23357
 
 randomSocket = ->
