@@ -120,6 +120,10 @@ localServer = (localPort) ->
     logger.info "Listening on #{localPort}"
 
 localConnection = (client) ->
+  # Immediatly pause the reading of data
+  # Resume when we have finished all the dirty work here
+  client.pause()
+
   # Try to create a connection with the server
   socketId = randomSocket()
   if not socketId?
@@ -146,5 +150,9 @@ localConnection = (client) ->
   client.on 'data', (buf) ->
     logger.info "Sending data of length #{buf.length} from #{connId}"
     wsFunctions[socketId].send connId, buf
+
+  # Now we can safely resume the socket
+  # Without worrying about losing data
+  client.resume()
 
 clientMain()
