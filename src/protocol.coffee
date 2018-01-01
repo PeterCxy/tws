@@ -10,6 +10,8 @@ authenticate = (passwd, data) ->
     hmac.write data
     hmac.end()
 
+# TODO: Authenticate with timestamp
+#       DO NOT allow packets that are too old
 export buildHandshakePacket = (passwd, targetHost, targetPort) ->
   connRequest = "TARGET #{targetHost}:#{targetPort}"
   authCode = await authenticate passwd, connRequest

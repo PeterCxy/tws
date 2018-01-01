@@ -46,6 +46,8 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
     dataCallbacks[connId] = callback
 
   wsPool[index] = new WebSocket server
+  # TODO: Signal authentication failure
+  # TODO: Re-connection on close
   wsPool[index].on 'open', ->
     # handshake
     wsPool[index].send await protocol.buildHandshakePacket passwd, targetHost, targetPort
