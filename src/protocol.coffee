@@ -10,19 +10,21 @@ authenticate = (passwd, data) ->
     hmac.write data
     hmac.end()
 
-# TODO: Authenticate with timestamp
-#       DO NOT allow packets that are too old
 export buildHandshakePacket = (passwd, targetHost, targetPort) ->
-  connRequest = "TARGET #{targetHost}:#{targetPort}"
+  connRequest = "NOW #{Date.now()}\nTARGET #{targetHost}:#{targetPort}"
   authCode = await authenticate passwd, connRequest
   return "AUTH #{authCode}\n#{connRequest}"
 
 export parseHandshakePacket = (passwd, packet) ->
   lines = new Buffer(packet).toString('utf-8').split '\n'
-  return just null if lines.length != 2
-  return null if lines[0] != "AUTH " + (await authenticate passwd, lines[1])
-  return null if not lines[1].startsWith 'TARGET '
-  return lines[1][7..].split(':')
+  return just null if lines.length != 3
+  return null if lines[0] != "AUTH " + (await authenticate passwd, "#{lines[1]}\n#{lines[2]}")
+  return null if not lines[1].startsWith 'NOW '
+  # Disallow packets that are more than 10 seconds old
+  # TODO: Make this a configurable option
+  return null if Date.now() - parseInt(lines[1][4..]) > 10000
+  return null if not lines[2].startsWith 'TARGET '
+  return lines[2][7..].split(':')
 
 export buildConnectPacket = (passwd) ->
   connId = generateId()
