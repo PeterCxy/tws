@@ -14,11 +14,15 @@ clientConnection = (passwd) -> (conn) ->
   stage = 0
   targetHost = null
   targetPort = 0
-  # TODO: Tear down all connections if the websocket session is broken
+  connClose = ->
+    # TODO: Tear down all connections if the websocket session is broken
+  conn.on 'close', connClose
+  conn.on 'error', connClose
   conn.on 'message', (msg) ->
     if stage == 0 # haven't handshaked yet
       target = await protocol.parseHandshakePacket passwd, msg
       if not (target? && target.length == 2) # Close immediately for unknown packets
+        logger.error "Unknown client is connecting to this server. Disconnecting."
         conn.close 1002
         return
       [targetHost, targetPort] = target

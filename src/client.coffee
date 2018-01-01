@@ -45,9 +45,16 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
   onData = (connId, callback) -> # Call `callback` upon receiving data for the logical connection
     dataCallbacks[connId] = callback
 
+  closed = false
+  wsClose = ->
+    return if closed
+    closed = true
+    logger.error "Connection #{index} closed by server."
+    # TODO: clean up and re-connect on close
+
   wsPool[index] = new WebSocket server
-  # TODO: Signal authentication failure
-  # TODO: Re-connection on close
+  wsPool[index].on 'close', wsClose
+  wsPool[index].on 'error', wsClose
   wsPool[index].on 'open', ->
     # handshake
     wsPool[index].send await protocol.buildHandshakePacket passwd, targetHost, targetPort
@@ -60,6 +67,7 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
       onData: onData,
       send: send
     }
+
   wsPool[index].on 'message', (msg) ->
     # Test if this is a payload message
     payload = protocol.parsePayloadPacket msg
