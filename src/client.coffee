@@ -5,7 +5,6 @@ import * as protocol from './protocol'
 import { randomInt } from './util'
 
 wsPool = new Array(32)
-wsCallbacks = new Array(32)
 wsFunctions = new Array(32)
 
 clientMain = ->
@@ -49,8 +48,24 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
   wsClose = ->
     return if closed
     closed = true
-    logger.error "Connection #{index} closed by server."
-    # TODO: clean up and re-connect on close
+    logger.error "Connection #{index} closed by server. Retrying..."
+
+    # clean up and re-connect on close
+    wsPool[index] = null
+    if wsFunctions[index]?
+      wsFunctions[index] = null
+
+    connectCallbacks = null
+    for _, v of closeCallbacks
+      # Destroy all the connections
+      v()
+    closeCallbacks = null
+    dataCallbacks = null
+
+    # Retry connection
+    setTimeout(() ->
+      serverConnection index, server, passwd, targetHost, targetPort
+    , 1000)
 
   wsPool[index] = new WebSocket server
   wsPool[index].on 'close', wsClose
