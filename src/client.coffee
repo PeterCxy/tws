@@ -16,8 +16,11 @@ clientMain = ->
 
 randomSocket = ->
   index = -1
+  count = 0
   while index == -1 || wsFunctions[index] == null # Pick a working socket
+    return null if count > 10 # Possibly no working connection for now.
     index = randomInt wsPool.length
+    count++
   return index
 
 serverConnection = (index, server, passwd, targetHost, targetPort) ->
@@ -116,9 +119,17 @@ localServer = (localPort) ->
 localConnection = (client) ->
   # Try to create a connection with the server
   socketId = randomSocket()
-  connId = await wsFunctions[socketId].connect()
+  if not socketId?
+    client.end()
+    return
+  connId = null
+  try
+    connId = await wsFunctions[socketId].connect()
+  catch error
+    # Nothing
   if not connId?
     client.end()
+    return
 
   # Wait for server's request to close connection
   wsFunctions[socketId].onClose connId, -> client.end()
