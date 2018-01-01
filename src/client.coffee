@@ -79,6 +79,7 @@ serverConnection = (index, server, passwd, targetHost, targetPort) ->
           connectCallbacks[connId](false)
         if closeCallbacks[connId]?
           closeCallbacks[connId]()
+          delete dataCallbacks[connId] if dataCallbacks[connId]?
 
 localServer = (localPort) ->
   server = net.createServer localConnection
