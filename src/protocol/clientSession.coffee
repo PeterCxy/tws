@@ -9,6 +9,7 @@ export default class ClientSession
   isReady: => @ready
   connect: =>
     @ready = false
+    @timer = null # heartbeat timer object
     # The `resolve` function of the promises of creating new connections.
     @connectCallbacks = {}
     # The callbacks for closing logical connections
@@ -32,6 +33,9 @@ export default class ClientSession
     return if @closed
     @closed = true
     @ready = false
+    if @timer?
+      clearInterval @timer
+      @timer = null
     logger.error "Connection #{@index} closed by server. Retrying..."
 
     # clean up and re-connect on close
@@ -50,6 +54,10 @@ export default class ClientSession
     # TODO: allow customizing this timeout
 
   onReceive: (msg) =>
+    # Enable heartbeat if this is the first received packet
+    if not @timer?
+      @timer = protocol.heartbeat @socket, @onWsClose
+
     # If we receive anything from the server
     # It is guaranteed that this session is now ready (handshake succeeded)
     # TODO: Maybe we need a Handshake response packet

@@ -9,6 +9,7 @@ export default class ServerSession
     @stage = 0
     @targetHost = null
     @targetPort = 0
+    @timer = null # heartbeat timer object
 
     # Listen on the needed events
     @conn.on 'close', @connClose
@@ -18,6 +19,9 @@ export default class ServerSession
 
   connClose: ->
     # TODO: clean up job
+    if @timer?
+      clearInterval @timer
+      @timer = null
 
   onReceive: (msg) =>
     if @stage is 0 # Handshake not completed
@@ -37,6 +41,10 @@ export default class ServerSession
     @conn.send('' + randomInt())
     logger.info "Client tunneling to #{@targetHost}:#{@targetPort}"
     @stage = 1
+
+    # Enable heartbeat packets
+    if not @timer?
+      @timer = protocol.heartbeat @conn, @connClose
 
   processRequest: (msg) =>
     # Test if the request is a payload

@@ -10,6 +10,22 @@ authenticate = (passwd, data) ->
     hmac.write data
     hmac.end()
 
+# Perform heartbeat to avoid connection being stalled
+# Returns a Timer object. This timer should be cancelled
+# when the websocket is closed or closed by this function
+export heartbeat = (webSocket, onClose) ->
+  isAlive = true
+  webSocket.on 'pong', ->
+    isAlive = true
+  checker = ->
+    if not isAlive
+      webSocket.terminate()
+      onClose()
+      return
+    isAlive = false
+    webSocket.ping '', false, true
+  setInterval checker, 10000 # TODO: allow changing this interval
+
 export buildHandshakePacket = (passwd, targetHost, targetPort) ->
   connRequest = "NOW #{Date.now()}\nTARGET #{targetHost}:#{targetPort}"
   authCode = await authenticate passwd, connRequest
