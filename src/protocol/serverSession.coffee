@@ -51,7 +51,7 @@ export default class ServerSession
     # It shares the packet type `connect-response` though it is not
     connResp = protocol.parseConnectResponsePacket msg
     if connResp?
-      @processRequest connResp
+      @processConnectResponse connResp
       return
 
     # Test if the request is a CONNECT request

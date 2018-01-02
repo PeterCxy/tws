@@ -1,6 +1,6 @@
 import * as net from 'net'
-import { logger } from './log'
-import { randomInt } from './util'
+import { logger } from './util/log'
+import { randomInt } from './util/util'
 import ClientSession from './protocol/clientSession'
 
 CONNECTION_COUNT = 2
