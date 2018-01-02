@@ -24,6 +24,7 @@ export default class LocalSession
       new ClientSession index, @server, @passwd, @targetHost, @targetPort
 
     # Create the local server
+    # TODO: Allow customizing listen address (default to 127.0.0.1)
     @socket = net.createServer @onNewClient
     @socket.listen @localPort
 

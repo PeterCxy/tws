@@ -30,6 +30,8 @@ export default class ClientSession
     # Flag for this session being closed
     @closed = false
     # Create the websocket object
+    # TODO: support customized User-Agent header
+    # TODO: support specifying accepted certificates
     @socket = new WebSocket @server
 
     # Listen on the needed events
