@@ -130,7 +130,8 @@ export parseConnectResponsePacket = (packet) ->
 export buildPayloadPacket = (connId, payload) ->
   Buffer.concat([Buffer.from("P" + connId), payload])
 
+CHAR_P = 'P'.charCodeAt(0)
 export parsePayloadPacket = (packet) ->
   return null if packet.length < 8 # 'P' + connId(6) + 1
-  return null if packet[0] != 'P'.charCodeAt(0) # Starts with 'P'
+  return null if packet[0] != CHAR_P # Starts with 'P'
   return [packet[1..6], packet[7..]]
