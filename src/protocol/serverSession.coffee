@@ -1,7 +1,7 @@
-import * as net from 'net'
 import { logger } from '../util/log'
 import * as protocol from './protocol'
 import { randomInt } from '../util/util'
+import RemoteSession from './remoteSession'
 
 export default class ServerSession
   constructor: (@passwd, @conn) ->
@@ -68,36 +68,26 @@ export default class ServerSession
   forwardPayload: (payload) =>
     [connId, buf] = payload
     logger.info "Packet sent from #{connId} with length #{buf.length}"
-    @proxyConns[connId].write buf if @proxyConns[connId]?
+    @proxyConns[connId].sendPayload buf if @proxyConns[connId]?
 
   processConnectResponse: (connResp) =>
     [connId, _] = connResp
     if @proxyConns[connId]?
-      @proxyConns[connId].end()
+      @proxyConns[connId].onConnectionClose()
 
   processLogicalConnection: (connId) =>
     logger.info "Client requesting new connection #{connId}"
-        
-    # Create the connection
-    socket = net.createConnection @targetPort, @targetHost
-    # TODO: pause socket before the dirty bring-up job
-    # TODO: maybe a separate class for managing remote session
+    @proxyConns[connId] = new RemoteSession this, connId, @targetHost, @targetPort
 
-    # Define some clean-up jobs
-    cleanup = =>
-      logger.info "Tearing down connection #{connId}"
-      delete @proxyConns[connId]
-      # Notify the client that this logical connection is now down
-      @conn.send protocol.buildConnectResponsePacket connId, false
-    socket.once 'close', cleanup
-    socket.once 'error', cleanup
+  # Logical connection events
+  # Interact with RemoteSession
+  onLogicalConnectionUp: (connId) =>
+    @conn.send protocol.buildConnectResponsePacket connId, true
 
-    # When connected, notify the client that this connection is now ready
-    socket.once 'connect', =>
-      @proxyConns[connId] = socket
-      @conn.send protocol.buildConnectResponsePacket connId, true
+  onLogicalConnectionDown: (connId) =>
+    return if not @proxyConns[connId]?
+    delete @proxyConns[connId]
+    @conn.send protocol.buildConnectResponsePacket connId, false
 
-    # Forward all the data with payload packets
-    socket.on 'data', (buf) =>
-      logger.info "Packet received from #{connId} with length #{buf.length}"
-      @conn.send protocol.buildPayloadPacket connId, buf
+  sendLogicalConnectionPayload: (connId, buf) =>
+    @conn.send protocol.buildPayloadPacket connId, buf
