@@ -8,74 +8,103 @@ wss = null
 
 serverMain = (port) ->
   wss = new WebSocket.Server { port: port }
-  wss.on 'connection', clientConnection 'testpasswd'
-
-clientConnection = (passwd) -> (conn) ->
-  proxyConns = {}
-  stage = 0
-  targetHost = null
-  targetPort = 0
-  connClose = ->
-    # TODO: Tear down all connections if the websocket session is broken
-  conn.on 'close', connClose
-  conn.on 'error', connClose
-  conn.on 'message', (msg) ->
-    if stage == 0 # haven't handshaked yet
-      target = await protocol.parseHandshakePacket passwd, msg
-      if not (target? && target.length == 2) # Close immediately for unknown packets
-        logger.error "Unknown client is connecting to this server. Disconnecting."
-        conn.close 1002
-        return
-      [targetHost, targetPort] = target
-
-      # Send anything back to client to activate this connection
-      conn.send('' + randomInt())
-      logger.info "Client tunneling to #{targetHost}:#{targetPort}"
-      stage = 1
-    else if stage = 1 # handshaked
-      # Test if it is a payload packet
-      payload = protocol.parsePayloadPacket msg
-      if payload?
-        [connId, buf] = payload
-        logger.info "Packet sent from #{connId} with length #{buf.length}"
-        #console.log buf.toString('utf-8')
-        proxyConns[connId].write buf if proxyConns[connId]?
-        return
-      # Test if it is a connect-response packet
-      # In this case, it must be a packet requesting
-      # to close a connection
-      connResp = protocol.parseConnectResponsePacket msg
-      if connResp?
-        [connId, _] = connResp
-        if proxyConns[connId]?
-          proxyConns[connId].end()
-        return
-
-      # Test if it is a connect packet
-      connId = await protocol.parseConnectPacket passwd, msg
-      if connId?
-        logger.info "Client requesting new connection #{connId}"
-        
-        # Create the connection
-        socket = net.createConnection targetPort, targetHost
-        cleanup = ->
-          logger.info "Tearing down connection #{connId}"
-          delete proxyConns[connId]
-          conn.send protocol.buildConnectResponsePacket connId, false
-        socket.once 'close', cleanup
-        socket.once 'error', cleanup
-        socket.once 'connect', ->
-          proxyConns[connId] = socket
-          conn.send protocol.buildConnectResponsePacket connId, true
-        socket.on 'data', (buf) ->
-          logger.info "Packet received from #{connId} with length #{buf.length}"
-          conn.send protocol.buildPayloadPacket connId, buf
-      #conn.send 'CONNECTION CREATED'
-
-#remoteConnection = (connId, wsConn, targetHost, targetPort, onConnect, onError) ->
-#  socket = net.createConnection targetPort, targetHost
-#  socket.once 'error', -> onError()
-#  socket.once 'connect', -> onConnect()
-#  return socket
+  wss.on 'connection', (conn) ->
+    new ServerSession 'testpasswd', conn
 
 serverMain 23356
+
+class ServerSession
+  constructor: (@passwd, @conn) ->
+    @proxyConns = {}
+    @stage = 0
+    @targetHost = null
+    @targetPort = 0
+
+    # Listen on the needed events
+    @conn.on 'close', @connClose
+    @conn.on 'error', @connClose
+    @conn.on 'message', @onReceive
+
+  connClose: ->
+    # TODO: clean up job
+
+  onReceive: (msg) =>
+    if @stage is 0 # Handshake not completed
+      @serverHandshake msg
+    else if @stage is 1 # Server up, accepting logical connections
+      @processRequest msg
+
+  serverHandshake: (msg) =>
+    target = await protocol.parseHandshakePacket @passwd, msg
+    if not (target? and target.length is 2) # Close immediately for unknown packets
+      logger.error "Unknown client is connecting to this server. Disconnecting."
+      @conn.close 1002
+      return
+    [@targetHost, @targetPort] = target
+
+    # Send anything back to client to activate this connection
+    @conn.send('' + randomInt())
+    logger.info "Client tunneling to #{@targetHost}:#{@targetPort}"
+    @stage = 1
+
+  processRequest: (msg) =>
+    # Test if the request is a payload
+    payload = protocol.parsePayloadPacket msg
+    if payload?
+      # Forward the payload packet to remote (target)
+      @forwardPayload payload
+      return
+
+    # Test if the request is a connect-response packet
+    # If a server receives such packet, it must be closing the connection
+    # It shares the packet type `connect-response` though it is not
+    connResp = protocol.parseConnectResponsePacket msg
+    if connResp?
+      @processRequest connResp
+      return
+
+    # Test if the request is a CONNECT request
+    # This kind of request opens a new logical connection within our session
+    # which maps to a real connection from the server to the target
+    # The client supplies the proposed connId
+    # TODO: Check if there is any duplicated connId and close the connection if so
+    #       while this does not seem to be ever possible. (probability: 1/(62^6))
+    connId = await protocol.parseConnectPacket @passwd, msg
+    if connId?
+      # Create the connection
+      @processLogicalConnection connId
+
+  forwardPayload: (payload) =>
+    [connId, buf] = payload
+    logger.info "Packet sent from #{connId} with length #{buf.length}"
+    @proxyConns[connId].write buf if @proxyConns[connId]?
+
+  processConnectResponse: (connResp) =>
+    [connId, _] = connResp
+    if @proxyConns[connId]?
+      @proxyConns[connId].end()
+
+  processLogicalConnection: (connId) =>
+    logger.info "Client requesting new connection #{connId}"
+        
+    # Create the connection
+    socket = net.createConnection @targetPort, @targetHost
+
+    # Define some clean-up jobs
+    cleanup = =>
+      logger.info "Tearing down connection #{connId}"
+      delete @proxyConns[connId]
+      # Notify the client that this logical connection is now down
+      @conn.send protocol.buildConnectResponsePacket connId, false
+    socket.once 'close', cleanup
+    socket.once 'error', cleanup
+
+    # When connected, notify the client that this connection is now ready
+    socket.once 'connect', =>
+      @proxyConns[connId] = socket
+      @conn.send protocol.buildConnectResponsePacket connId, true
+
+    # Forward all the data with payload packets
+    socket.on 'data', (buf) =>
+      logger.info "Packet received from #{connId} with length #{buf.length}"
+      @conn.send protocol.buildPayloadPacket connId, buf
