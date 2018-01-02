@@ -99,12 +99,12 @@ export default class ServerSession
   # Logical connection events
   # Interact with RemoteSession
   onLogicalConnectionUp: (connId) =>
-    @conn.send protocol.buildConnectResponsePacket connId, true
+    @conn?.send protocol.buildConnectResponsePacket connId, true
 
   onLogicalConnectionDown: (connId) =>
     return if @closed or (not @proxyConns[connId]?)
     delete @proxyConns[connId]
-    @conn.send protocol.buildConnectResponsePacket connId, false
+    @conn?.send protocol.buildConnectResponsePacket connId, false
 
   sendLogicalConnectionPayload: (connId, buf) =>
-    @conn.send protocol.buildPayloadPacket connId, buf if @conn?
+    @conn?.send protocol.buildPayloadPacket connId, buf

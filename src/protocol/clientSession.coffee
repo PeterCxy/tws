@@ -113,17 +113,17 @@ export default class ClientSession
           resolve connId
         else
           resolve null
-      @socket.send packet
+      @socket?.send packet
 
   # Propose to close the logical connection with connId
   # Will return immediately.
   # When the connection is actually down, the onLogicalConnectionClose callback will be called
   closeLogicalConnection: (connId) =>
-    @socket.send protocol.buildConnectResponsePacket connId, false
+    @socket?.send protocol.buildConnectResponsePacket connId, false
 
   # Send a payload packet to a logical connection
   sendLogicalConnectionPayload: (connId, buf) =>
-    @socket.send protocol.buildPayloadPacket connId, buf
+    @socket?.send protocol.buildPayloadPacket connId, buf
 
   # Register a callback for the close event of a logical connection
   onLogicalConnectionClose: (connId, callback) =>
