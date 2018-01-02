@@ -32,7 +32,7 @@ export buildHandshakePacket = (passwd, targetHost, targetPort) ->
   return "AUTH #{authCode}\n#{connRequest}"
 
 export parseHandshakePacket = (passwd, packet) ->
-  lines = new Buffer(packet).toString('utf-8').split '\n'
+  lines = Buffer.from(packet).toString('utf-8').split '\n'
   return just null if lines.length != 3
   return null if lines[0] != "AUTH " + (await authenticate passwd, "#{lines[1]}\n#{lines[2]}")
   return null if not lines[1].startsWith 'NOW '
@@ -49,7 +49,7 @@ export buildConnectPacket = (passwd) ->
   return [connId, "AUTH #{authCode}\n#{connRequest}"]
 
 export parseConnectPacket = (passwd, packet) ->
-  lines = new Buffer(packet).toString('utf-8').split '\n'
+  lines = Buffer.from(packet).toString('utf-8').split '\n'
   return just null if lines.length != 2
   return null if lines[0] != "AUTH " + (await authenticate passwd, lines[1])
   return null if not lines[1].startsWith 'NEW CONNECTION '
@@ -61,14 +61,14 @@ export buildConnectResponsePacket = (connId, ok) ->
   "CONNECTION #{connId} #{if ok then 'OK' else 'CLOSED'}"
 
 export parseConnectResponsePacket = (packet) ->
-  words = new Buffer(packet).toString('utf-8').split ' '
+  words = Buffer.from(packet).toString('utf-8').split ' '
   return null if words.length != 3
   return null if words[0] != 'CONNECTION'
   return null if (words[2] != 'OK' && words[2] != 'CLOSED')
   return [words[1], (words[2] == 'OK')]
 
 export buildPayloadPacket = (connId, payload) ->
-  Buffer.concat([new Buffer("P" + connId), payload])
+  Buffer.concat([Buffer.from("P" + connId), payload])
 
 export parsePayloadPacket = (packet) ->
   return null if packet.length < 8 # 'P' + connId(6) + 1

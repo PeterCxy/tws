@@ -61,6 +61,7 @@ export default class ServerSession
     if payload?
       # Forward the payload packet to remote (target)
       @forwardPayload payload
+      payload = null
       return
 
     # Test if the request is a connect-response packet
