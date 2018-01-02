@@ -9,19 +9,28 @@ export default class ServerSession
     @stage = 0
     @targetHost = null
     @targetPort = 0
+    @closed = false
     @timer = null # heartbeat timer object
 
     # Listen on the needed events
     @conn.on 'close', @connClose
     @conn.on 'error', @connClose
     @conn.on 'message', @onReceive
-    # TODO: ping-pong machanism
 
-  connClose: ->
-    # TODO: clean up job
+  connClose: =>
+    return if @closed
+    @closed = true
+
+    # Clean-up job
     if @timer?
       clearInterval @timer
       @timer = null
+    @conn = null
+
+    # Terminate all TCP connections
+    for _, v of @proxyConns
+      v.onConnectionClose()
+    @proxyConns = null
 
   onReceive: (msg) =>
     if @stage is 0 # Handshake not completed
@@ -93,7 +102,7 @@ export default class ServerSession
     @conn.send protocol.buildConnectResponsePacket connId, true
 
   onLogicalConnectionDown: (connId) =>
-    return if not @proxyConns[connId]?
+    return if @closed or (not @proxyConns[connId]?)
     delete @proxyConns[connId]
     @conn.send protocol.buildConnectResponsePacket connId, false
 
