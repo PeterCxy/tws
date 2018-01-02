@@ -3,6 +3,20 @@ import ClientSession from './clientSession'
 import { randomInt } from '../util/util'
 import { logger } from '../util/log'
 
+###
+  A LocalSession operates a local TCP server.
+  Any connection to this TCP server will be
+  forwarded to the given WebSocket server
+  and futher to a designated remote server.
+
+  Multiple WebSocket connection will be created
+  upon start. Every new connection accepted from
+  the local server will be randomly assigned to
+  one of these WebSocket channels.
+
+  The WebSocket client-side channel implementation
+  is separated into ClientSession.
+###
 export default class LocalSession
   constructor: (@concurrency, @localPort, @server, @passwd, @targetHost, @targetPort) ->
     # Create all the concurrent WebSocket sessions to the server
@@ -35,6 +49,13 @@ export default class LocalSession
     # Pass control over a LocalConnection object
     new LocalConnection session, client
 
+###
+  A LocalConnection operates one connection
+  accepted from the local TCP server.
+  It simply forwards everything to a logical
+  connection created on the assigned WebSocket
+  channel.
+###
 class LocalConnection
   constructor: (@session, @socket) ->
     @initialize()

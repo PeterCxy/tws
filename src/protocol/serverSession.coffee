@@ -3,6 +3,22 @@ import * as protocol from './protocol'
 import { randomInt } from '../util/util'
 import RemoteSession from './remoteSession'
 
+###
+  A ServerSession operates one WebSocket connection
+  between the client and the server. It forwards
+  data from the client to a remote server that the
+  client indicates in the handshake packet.
+
+  This WebSocket connection can tunnel multiple
+  'logical' TCP connections. Each logical connection
+  has its own unique ID and maps to a real connection
+  to the remote server.
+
+  Note that every logical connection handled in
+  one ServerSession can only be targeted to the same
+  remote server and port. See README for details on the
+  reason of such design.
+###
 export default class ServerSession
   constructor: (@passwd, @conn) ->
     @proxyConns = {}

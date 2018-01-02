@@ -2,6 +2,17 @@ import WebSocket from 'ws'
 import { logger } from '../util/log'
 import * as protocol from './protocol'
 
+###
+  A ClientSession operates the client side
+  of a WebSocket connection between the
+  client and the server.
+  It accepts request from LocalSession
+  and forwards every connection as a logical
+  connection to the server and further to
+  the designated remote. See ServerSession
+  for details on how connections are
+  multiplexed.
+###
 export default class ClientSession
   constructor: (@index, @server, @passwd, @targetHost, @targetPort) ->
     @connect()

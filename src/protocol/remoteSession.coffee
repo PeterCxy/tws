@@ -1,6 +1,13 @@
 import * as net from 'net'
 import { logger } from '../util/log'
 
+###
+  RemoteSession is a dependency of ServerSession.
+  A RemoteSession operates one connection from the server
+  (which is requested by the client) to the remote. It then
+  forwards payload back to its ServerSession and further
+  to the client.
+###
 export default class RemoteSession
   constructor: (@serverSession, @connId, @targetHost, @targetPort) ->
     @closed = false
