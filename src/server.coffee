@@ -24,6 +24,7 @@ class ServerSession
     @conn.on 'close', @connClose
     @conn.on 'error', @connClose
     @conn.on 'message', @onReceive
+    # TODO: ping-pong machanism
 
   connClose: ->
     # TODO: clean up job
@@ -89,6 +90,8 @@ class ServerSession
         
     # Create the connection
     socket = net.createConnection @targetPort, @targetHost
+    # TODO: pause socket before the dirty bring-up job
+    # TODO: maybe a separate class for managing remote session
 
     # Define some clean-up jobs
     cleanup = =>

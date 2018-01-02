@@ -6,113 +6,23 @@ import { randomInt } from './util'
 
 CONNECTION_COUNT = 2
 
-wsPool = new Array(CONNECTION_COUNT)
-wsFunctions = new Array(wsPool.length)
+wsPool = null
+
+process.nextTick -> clientMain()
 
 clientMain = ->
-  [0..(CONNECTION_COUNT - 1)].forEach (index) ->
-    serverConnection index, 'ws://127.0.0.1:23356', 'testpasswd', '118.178.213.186', 80
+  wsPool = [0..(CONNECTION_COUNT - 1)].map (index) ->
+    new ClientSession index, 'ws://127.0.0.1:23356', 'testpasswd', '118.178.213.186', 80
   localServer 23357
 
-randomSocket = ->
+randomSession = ->
   index = -1
   count = 0
-  while index == -1 || wsFunctions[index] == null # Pick a working socket
+  while index == -1 || (not wsPool[index].isReady()) # Pick a working socket
     return null if count > 10 # Possibly no working connection for now.
     index = randomInt wsPool.length
     count++
-  return index
-
-serverConnection = (index, server, passwd, targetHost, targetPort) ->
-  connectCallbacks = {} # The `resolve` function of the promises of creating new connections.
-  closeCallbacks = {} # The callbacks for closing connections
-  dataCallbacks = {} # Callbacks for incoming data
-  connect = -> # Create a new logical connection
-    [connId, packet] = await protocol.buildConnectPacket passwd
-    logger.info "Creating connection #{connId}"
-    await new Promise (resolve) -> # Wait until the server opens the connection
-      connectCallbacks[connId] = (res) ->
-        delete connectCallbacks[connId]
-        if res
-          resolve connId
-        else
-          resolve null
-      wsPool[index].send packet
-  close = (connId) -> # Close a logical connection
-    wsPool[index].send protocol.buildConnectResponsePacket connId, false
-  onClose = (connId, callback) -> # Call `callback` when the logical connection is down
-    closeCallbacks[connId] = ->
-      delete closeCallbacks[connId]
-      callback()
-  send = (connId, buf) ->
-    wsPool[index].send protocol.buildPayloadPacket connId, buf
-  onData = (connId, callback) -> # Call `callback` upon receiving data for the logical connection
-    dataCallbacks[connId] = callback
-
-  closed = false
-  wsClose = ->
-    return if closed
-    closed = true
-    logger.error "Connection #{index} closed by server. Retrying..."
-
-    # clean up and re-connect on close
-    wsPool[index] = null
-    if wsFunctions[index]?
-      wsFunctions[index] = null
-
-    connectCallbacks = null
-    for _, v of closeCallbacks
-      # Destroy all the connections
-      v()
-    closeCallbacks = null
-    dataCallbacks = null
-
-    # Retry connection
-    setTimeout(() ->
-      serverConnection index, server, passwd, targetHost, targetPort
-    , 1000)
-
-  wsPool[index] = new WebSocket server
-  wsPool[index].on 'close', wsClose
-  wsPool[index].on 'error', wsClose
-  wsPool[index].on 'open', ->
-    # handshake
-    wsPool[index].send await protocol.buildHandshakePacket passwd, targetHost, targetPort
-
-  wsPool[index].on 'message', (msg) ->
-    if not wsFunctions[index]?
-      # The connection is now activated
-      # Expose the functions for calling from local TCP server
-      wsFunctions[index] = {
-        connect: connect,
-        close: close,
-        onClose: onClose,
-        onData: onData,
-        send: send
-      }
-      return
-
-    # Test if this is a payload message
-    payload = protocol.parsePayloadPacket msg
-    if payload?
-      [connId, buf] = payload
-      logger.info "Received packet from #{connId} with length #{buf.length}"
-      dataCallbacks[connId] buf if dataCallbacks[connId]?
-
-    # Test if this is a connect-response message signaling state of connection
-    connectResp = protocol.parseConnectResponsePacket msg
-    if connectResp?
-      [connId, ok] = connectResp
-      if ok
-        logger.info "Connection #{connId} successfully created"
-        if connectCallbacks[connId]?
-          connectCallbacks[connId](true)
-      else
-        if connectCallbacks[connId]?
-          connectCallbacks[connId](false)
-        if closeCallbacks[connId]?
-          closeCallbacks[connId]()
-          delete dataCallbacks[connId] if dataCallbacks[connId]?
+  return wsPool[index]
 
 localServer = (localPort) ->
   server = net.createServer localConnection
@@ -125,13 +35,13 @@ localConnection = (client) ->
   client.pause()
 
   # Try to create a connection with the server
-  socketId = randomSocket()
-  if not socketId?
+  session = randomSession()
+  if not session?
     client.end()
     return
   connId = null
   try
-    connId = await wsFunctions[socketId].connect()
+    connId = await session.createLogicalConnection()
   catch error
     # Nothing
   if not connId?
@@ -139,20 +49,148 @@ localConnection = (client) ->
     return
 
   # Wait for server's request to close connection
-  wsFunctions[socketId].onClose connId, -> client.end()
-  wsFunctions[socketId].onData connId, (buf) -> client.write buf
+  session.onLogicalConnectionClose connId, -> client.end()
+  session.onLogicalConnectionReceive connId, (buf) -> client.write buf
   
   onClose = ->
     logger.info "Tearing down connection #{connId}"
-    wsFunctions[socketId].close connId if wsFunctions[socketId]?
+    if session.isReady()
+      # If this close event is not caused by the `onLogicalConnectionClose` event
+      # sent when the whole session is torn down
+      # then notify the session that the client connection is closed
+      session.closeLogicalConnection connId
   client.once 'close', onClose
   client.once 'error', onClose
   client.on 'data', (buf) ->
     logger.info "Sending data of length #{buf.length} from #{connId}"
-    wsFunctions[socketId].send connId, buf
+    session.sendLogicalConnectionPayload connId, buf
 
   # Now we can safely resume the socket
   # Without worrying about losing data
   client.resume()
 
-clientMain()
+class ClientSession
+  constructor: (@index, @server, @passwd, @targetHost, @targetPort) ->
+    @connect()
+
+  isReady: => @ready
+  connect: =>
+    @ready = false
+    # The `resolve` function of the promises of creating new connections.
+    @connectCallbacks = {}
+    # The callbacks for closing logical connections
+    @closeCallbacks = {}
+    # Callbacks for incoming data
+    @dataCallbacks = {}
+    # Flag for this session being closed
+    @closed = false
+    # Create the websocket object
+    @socket = new WebSocket @server
+
+    # Listen on the needed events
+    @socket.on 'close', @onWsClose
+    @socket.on 'error', @onWsClose
+    @socket.on 'open', =>
+      # Send handshake packet
+      @socket.send await protocol.buildHandshakePacket @passwd, @targetHost, @targetPort
+    @socket.on 'message', @onReceive
+
+  onWsClose: =>
+    return if @closed
+    @closed = true
+    @ready = false
+    logger.error "Connection #{@index} closed by server. Retrying..."
+
+    # clean up and re-connect on close
+    @connectCallbacks = null
+    for _, v of @closeCallbacks
+      # Destroy all the connections
+      v()
+    @closeCallbacks = null
+    @dataCallbacks = null
+    @socket = null
+
+    # Retry connection
+    setTimeout(() =>
+      @connect()
+    , 1000)
+    # TODO: allow customizing this timeout
+
+  onReceive: (msg) =>
+    # If we receive anything from the server
+    # It is guaranteed that this session is now ready (handshake succeeded)
+    # TODO: Maybe we need a Handshake response packet
+    #       in case the client is connected to a non-tws server
+    @ready = true
+
+    # Test if this is a payload packet
+    # If so, forward it to the local TCP socket
+    payload = protocol.parsePayloadPacket msg
+    if payload?
+      @forwardPayload payload
+      return
+
+    # Test if this is a connect-response packet
+    # Which signals the state of a logical connection
+    connResp = protocol.parseConnectResponsePacket msg
+    if connResp?
+      @processConnectResponse connResp
+      return
+
+  forwardPayload: (payload) =>
+    [connId, buf] = payload
+    logger.info "Received packet from #{connId} with length #{buf.length}"
+    @dataCallbacks[connId] buf if @dataCallbacks[connId]?
+
+  processConnectResponse: (connResp) =>
+    [connId, ok] = connResp
+    if ok
+      # This logical connection is now ready
+      logger.info "Connection #{connId} successfully created"
+      if @connectCallbacks[connId]?
+        @connectCallbacks[connId](true)
+    else
+      # This logical connection is now closed (or not connected at all)
+      if @connectCallbacks[connId]?
+        @connectCallbacks[connId](false)
+      if @closeCallbacks[connId]?
+        @closeCallbacks[connId]()
+      # No further payload packets can be possible.
+      delete @dataCallbacks[connId] if @dataCallbacks[connId]?
+
+  # Methods for the local TCP socket to call
+  # Things about managing logical connections
+  # Create a new logical connection
+  # Returns a promise that will resolve when the logical connection is ready
+  createLogicalConnection: =>
+    [connId, packet] = await protocol.buildConnectPacket @passwd
+    logger.info "Creating connection #{connId}"
+    await new Promise (resolve) => # Wait until the server opens the connection
+      @connectCallbacks[connId] = (res) =>
+        delete @connectCallbacks[connId]
+        if res
+          resolve connId
+        else
+          resolve null
+      @socket.send packet
+
+  # Propose to close the logical connection with connId
+  # Will return immediately.
+  # When the connection is actually down, the onLogicalConnectionClose callback will be called
+  closeLogicalConnection: (connId) =>
+    @socket.send protocol.buildConnectResponsePacket connId, false
+
+  # Send a payload packet to a logical connection
+  sendLogicalConnectionPayload: (connId, buf) =>
+    @socket.send protocol.buildPayloadPacket connId, buf
+
+  # Register a callback for the close event of a logical connection
+  onLogicalConnectionClose: (connId, callback) =>
+    @closeCallbacks[connId] = =>
+      delete @closeCallbacks[connId]
+      callback()
+
+  # Register a callback for the `data` event (receiving data) of the logical connection
+  # i.e. this callback will be called once a payload packet needs to be forwarded
+  onLogicalConnectionReceive: (connId, callback) =>
+    @dataCallbacks[connId] = callback
