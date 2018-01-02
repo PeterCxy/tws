@@ -1,5 +1,5 @@
 import * as crypto from 'crypto'
-import { just, generateId } from './util'
+import { just, generateId } from '../util/util'
 
 authenticate = (passwd, data) ->
   new Promise (resolve) ->
