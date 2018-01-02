@@ -107,4 +107,4 @@ export default class ServerSession
     @conn.send protocol.buildConnectResponsePacket connId, false
 
   sendLogicalConnectionPayload: (connId, buf) =>
-    @conn.send protocol.buildPayloadPacket connId, buf
+    @conn.send protocol.buildPayloadPacket connId, buf if @conn?
