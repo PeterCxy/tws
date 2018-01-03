@@ -7,7 +7,8 @@ _serverMain = (host, port, password) ->
   wss = new WebSocket.Server {
     host: host,
     port: port
-  }
+  }, ->
+    logger.info "Listening on ws://#{host}:#{port}/"
   wss.on 'connection', (conn) ->
     new ServerSession password, conn
 

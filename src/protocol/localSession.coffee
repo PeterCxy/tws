@@ -28,7 +28,8 @@ export default class LocalSession
     @socket.listen {
       host: @localAddr,
       port: @localPort
-    }
+    }, =>
+      logger.info "Listening on #{@localAddr}:#{@localPort}"
 
   randomSession: =>
     index = -1
