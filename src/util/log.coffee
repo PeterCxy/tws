@@ -10,5 +10,6 @@ export logger = winston.createLogger {
   ),
   transports: [
     new winston.transports.Console()
-  ]
+  ],
+  level: if process.env['NODE_ENV'] is 'debug' then 'debug' else 'info'
 }

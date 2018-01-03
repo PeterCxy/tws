@@ -87,6 +87,7 @@ class LocalConnection
 
   # Invoked when remote has closed the connection
   onRemoteClose: =>
+    logger.info "[#{@connId}] closed by remote"
     @socket.end() if not @socket.destroyed
 
   # Invoked when client has requested to close the connection
@@ -95,7 +96,7 @@ class LocalConnection
   onClientClose: =>
     return if @closed
     @closed = true
-    logger.info "Tearing down connection #{@connId}"
+    logger.info "[#{@connId}] closed by client"
     if @session.isReady()
       # If the WebSocket session is still ready, send the close notification
       @session.closeLogicalConnection @connId
@@ -105,5 +106,5 @@ class LocalConnection
     @socket.write buf
 
   onClientReceive: (buf) =>
-    logger.info "Sending data of length #{buf.length} from #{@connId}"
+    logger.debug "[#{@connId}] sending #{buf.length} bytes"
     @session.sendLogicalConnectionPayload @connId, buf

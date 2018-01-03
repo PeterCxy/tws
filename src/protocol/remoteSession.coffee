@@ -26,13 +26,13 @@ export default class RemoteSession
     @serverSession.onLogicalConnectionUp @connId
   
   onDataReceived: (buf) =>
-    logger.info "Packet received from #{@connId} with length #{buf.length}"
+    logger.debug "[#{@connId}] received #{buf.length} bytes"
     @serverSession?.sendLogicalConnectionPayload @connId, buf
 
   onConnectionClose: =>
     return if @closed
     @closed = true
-    logger.info "Tearing down connection #{@connId}"
+    logger.info "[#{@connId}] closed"
     if not @socket.destroyed
       @socket.end()
       @socket.destroy()

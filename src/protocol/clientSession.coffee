@@ -70,6 +70,7 @@ export default class ClientSession
     # Enable heartbeat if this is the first received packet
     if not @timer?
       @timer = protocol.heartbeat @socket, @onWsClose
+      logger.info "[#{@index}] session ready."
 
     # If we receive anything from the server
     # It is guaranteed that this session is now ready (handshake succeeded)
@@ -93,14 +94,14 @@ export default class ClientSession
 
   forwardPayload: (payload) =>
     [connId, buf] = payload
-    logger.info "Received packet from #{connId} with length #{buf.length}"
+    logger.debug "[#{connId}] received #{buf.length} bytes"
     @dataCallbacks[connId] buf if @dataCallbacks[connId]?
 
   processConnectResponse: (connResp) =>
     [connId, ok] = connResp
     if ok
       # This logical connection is now ready
-      logger.info "Connection #{connId} successfully created"
+      logger.info "[#{connId}] ready"
       if @connectCallbacks[connId]?
         @connectCallbacks[connId](true)
     else
@@ -118,7 +119,7 @@ export default class ClientSession
   # Returns a promise that will resolve when the logical connection is ready
   createLogicalConnection: =>
     [connId, packet] = await protocol.buildConnectPacket @passwd
-    logger.info "Creating connection #{connId}"
+    logger.info "[#{connId}] new connection assigned to session #{@index}"
     await new Promise (resolve) => # Wait until the server opens the connection
       @connectCallbacks[connId] = (res) =>
         delete @connectCallbacks[connId]

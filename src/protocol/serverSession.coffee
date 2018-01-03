@@ -57,14 +57,14 @@ export default class ServerSession
   serverHandshake: (msg) =>
     target = await protocol.parseHandshakePacket @passwd, msg
     if not (target? and target.length is 2) # Close immediately for unknown packets
-      logger.error "Unknown client is connecting to this server. Disconnecting."
+      logger.warn "Unrecognized client. Disconnecting."
       @conn.close 1002
       return
     [@targetHost, @targetPort] = target
 
     # Send anything back to client to activate this connection
     @conn.send('' + randomInt())
-    logger.info "Client tunneling to #{@targetHost}:#{@targetPort}"
+    logger.info "Session up. Target #{@targetHost}:#{@targetPort}"
     @stage = 1
 
     # Enable heartbeat packets
@@ -101,7 +101,7 @@ export default class ServerSession
 
   forwardPayload: (payload) =>
     [connId, buf] = payload
-    logger.info "Packet sent from #{connId} with length #{buf.length}"
+    logger.debug "[#{connId}] sending #{buf.length} bytes"
     @proxyConns[connId].sendPayload buf if @proxyConns[connId]?
 
   processConnectResponse: (connResp) =>
@@ -110,7 +110,7 @@ export default class ServerSession
       @proxyConns[connId].onConnectionClose()
 
   processLogicalConnection: (connId) =>
-    logger.info "Client requesting new connection #{connId}"
+    logger.info "[#{connId}] open"
     @proxyConns[connId] = new RemoteSession this, connId, @targetHost, @targetPort
 
   # Logical connection events
