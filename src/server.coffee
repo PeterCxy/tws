@@ -4,10 +4,13 @@ import ServerSession from './protocol/serverSession'
 
 wss = null
 
-serverMain = (port) ->
+serverMain = (host, port) ->
   # TODO: support customized listen address (default to 127.0.0.1)
-  wss = new WebSocket.Server { port: port }
+  wss = new WebSocket.Server {
+    host: host,
+    port: port
+  }
   wss.on 'connection', (conn) ->
     new ServerSession 'testpasswd', conn
 
-serverMain 23356
+serverMain '127.0.0.1', 23356

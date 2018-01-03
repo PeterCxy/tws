@@ -9,6 +9,11 @@ import RemoteSession from './remoteSession'
   data from the client to a remote server that the
   client indicates in the handshake packet.
 
+  ServerSession does nothing to set up a WebSocket
+  server. This should be done by the outside, and
+  pass every new WebSocket connection here into the
+  constructor.
+
   This WebSocket connection can tunnel multiple
   'logical' TCP connections. Each logical connection
   has its own unique ID and maps to a real connection
