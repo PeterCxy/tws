@@ -12,11 +12,11 @@
   },
   "dependencies": {
     "winston": "^3.0.0-rc1",
-    "ws": "^3.3.3"
+    "ws": "^3.3.3",
+    "babel-polyfill": "^6.26.0"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",
-    "babel-polyfill": "^6.26.0",
     "babel-preset-env": "^1.6.1",
     "coffeescript": "^2.1.1"
   }
