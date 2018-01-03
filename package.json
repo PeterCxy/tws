@@ -11,9 +11,10 @@
     "build": "rm -rf lib && coffee --transpile -o lib -c src"
   },
   "dependencies": {
+    "babel-polyfill": "^6.26.0",
     "winston": "^3.0.0-rc1",
     "ws": "^3.3.3",
-    "babel-polyfill": "^6.26.0"
+    "yargs": "^10.0.3"
   },
   "devDependencies": {
     "babel-core": "^6.26.0",

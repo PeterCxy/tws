@@ -1,12 +1,15 @@
 import { logger } from './util/log'
+import { parseHost } from './util/util'
 import LocalSession from './protocol/localSession'
 
-CONNECTION_COUNT = 2
-process.nextTick -> clientMain()
-
-clientMain = ->
-  # TODO: also validate host before connecting
-  new LocalSession CONNECTION_COUNT, '127.0.0.1', 23357, 'ws://127.0.0.1:23356', 'testpasswd', '127.0.0.1', 5201
-  #wsPool = [0..(CONNECTION_COUNT - 1)].map (index) ->
-  #  new ClientSession index, 'ws://127.0.0.1:23356', 'testpasswd', '118.178.213.186', 80
-  #localServer 23357
+export clientMain = (argv) ->
+  parsedListen = parseHost argv.listen
+  return if not parsedListen?
+  parsedRemote = parseHost argv.remote
+  return if not parsedRemote?
+  [localHost, localPort] = parsedListen
+  [remoteHost, remotePort] = parsedRemote
+  new LocalSession(
+    argv.concurrency, localHost, localPort,
+    argv.server, argv.password, remoteHost, remotePort
+  )

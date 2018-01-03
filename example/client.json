@@ -1,0 +1,6 @@
+{
+  "listen": "127.0.0.1:23357",
+  "server": "ws://127.0.0.1:23356/",
+  "remote": "127.0.0.1:5201",
+  "password": "testpassword"
+}

@@ -1,16 +1,18 @@
 import WebSocket from 'ws'
 import { logger } from './util/log'
+import { parseHost } from './util/util'
 import ServerSession from './protocol/serverSession'
 
-wss = null
-
-serverMain = (host, port) ->
-  # TODO: support customized listen address (default to 127.0.0.1)
+_serverMain = (host, port, password) ->
   wss = new WebSocket.Server {
     host: host,
     port: port
   }
   wss.on 'connection', (conn) ->
-    new ServerSession 'testpasswd', conn
+    new ServerSession password, conn
 
-serverMain '127.0.0.1', 23356
+export serverMain = (argv) ->
+  parsedHost = parseHost argv.listen
+  return if not parsedHost?
+  [host, port] = parsedHost
+  _serverMain host, port, argv.password
