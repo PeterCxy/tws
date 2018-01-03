@@ -66,7 +66,7 @@ export parseHandshakePacket = (passwd, packet) ->
   return null if not lines[2].startsWith 'TARGET '
   # Pass the TARGET part to parseHost
   return parseHost lines[2][7..]
-  
+
 ###
   Client: CONNECT packet
   Requests a new logical connection through
@@ -95,7 +95,7 @@ export parseConnectPacket = (passwd, packet) ->
   return null if lines[0] != "AUTH " + (await authenticate passwd, lines[1])
   return null if not lines[1].startsWith 'NEW CONNECTION '
   connId = lines[1][15..]
-  return null if not (connId? && connId.length > 0)
+  return null if not (connId? && connId.length is 6)
   return connId
 
 ###
