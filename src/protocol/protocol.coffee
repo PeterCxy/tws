@@ -1,5 +1,5 @@
 import * as crypto from 'crypto'
-import { just, generateId } from '../util/util'
+import { just, generateId, parseHost } from '../util/util'
 
 # SHA256-based HMAC authentication
 # Sign any arbitary data with a password
@@ -64,12 +64,9 @@ export parseHandshakePacket = (passwd, packet) ->
   # TODO: Make this a configurable option
   return null if Date.now() - parseInt(lines[1][4..]) > 10000
   return null if not lines[2].startsWith 'TARGET '
-  # This could be IPv6, thus we only extract the last part as port
-  ipParts = lines[2][7..].split(':')
-  return null if ipParts.length < 2
-  # TODO: validate IP address and port
-  return [ipParts[0...(ipParts.length - 1)].join(':'), parseInt(ipParts[ipParts.length - 1])]
-
+  # Pass the TARGET part to parseHost
+  return parseHost lines[2][7..]
+  
 ###
   Client: CONNECT packet
   Requests a new logical connection through
