@@ -1,4 +1,4 @@
-import { logger } from './util/log'
+import * as log from './util/log'
 import { serverMain } from './server'
 import { clientMain } from './client'
 
@@ -56,7 +56,8 @@ clientArgs = (yargs) ->
 execute = (command) -> (argv) ->
   # Process globally-applied options
   if argv.verbose
-    logger.level = 'debug'
+    process.env['NODE_ENV'] = 'debug'
+  log.initialize()
   if command is 'server'
     serverMain argv
   else if command is 'client'
