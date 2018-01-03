@@ -64,7 +64,11 @@ export parseHandshakePacket = (passwd, packet) ->
   # TODO: Make this a configurable option
   return null if Date.now() - parseInt(lines[1][4..]) > 10000
   return null if not lines[2].startsWith 'TARGET '
-  return lines[2][7..].split(':')
+  # This could be IPv6, thus we only extract the last part as port
+  ipParts = lines[2][7..].split(':')
+  return null if ipParts.length < 2
+  # TODO: validate IP address and port
+  return [ipParts[0...(ipParts.length - 1)].join(':'), parseInt(ipParts[ipParts.length - 1])]
 
 ###
   Client: CONNECT packet
