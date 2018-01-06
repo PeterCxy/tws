@@ -10,7 +10,7 @@
   "private": false,
   "scripts": {
     "build": "rm -rf lib && coffee --transpile -o lib -c src",
-    "package": "rm -rf out && mkdir out && node_modules/.bin/pkg . -t node9-linux --out-path out"
+    "package": "rm -rf out && mkdir out && pkg . -t node9-linux --out-path out"
   },
   "dependencies": {
     "babel-polyfill": "^6.26.0",
