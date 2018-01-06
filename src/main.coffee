@@ -1,11 +1,20 @@
+import * as path from 'path'
 import * as log from './util/log'
 import { serverMain } from './server'
 import { clientMain } from './client'
 
+execName = path.basename(
+  if require.main.filename.startsWith '/snapshot'
+  then process.argv[0]
+  else __filename
+)
+
 process.nextTick -> main()
 
 main = ->
-  { argv } = require 'yargs'
+  yargs = require('yargs')()
+  yargs.$0 = execName
+  { argv } = yargs
     .usage '$0 <server|client> [options]'
     .demandCommand()
     .command {

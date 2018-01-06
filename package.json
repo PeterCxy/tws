@@ -2,13 +2,15 @@
   "name": "tws",
   "version": "1.0.0",
   "description": "TCP over WebSocket",
-  "main": "index.js",
+  "main": "./lib/main.js",
+  "bin": "./lib/main.js",
   "repository": "https://github.com/PeterCxy/tws.git",
   "author": "PeterCxy",
   "license": "GPL-3.0",
   "private": false,
   "scripts": {
-    "build": "rm -rf lib && coffee --transpile -o lib -c src"
+    "build": "rm -rf lib && coffee --transpile -o lib -c src",
+    "package": "rm -rf out && mkdir out && node_modules/.bin/pkg . -t node9-linux --out-path out"
   },
   "dependencies": {
     "babel-polyfill": "^6.26.0",
@@ -19,6 +21,13 @@
   "devDependencies": {
     "babel-core": "^6.26.0",
     "babel-preset-env": "^1.6.1",
-    "coffeescript": "^2.1.1"
+    "coffeescript": "^2.1.1",
+    "pkg": "^4.3.0-beta.5"
+  },
+  "pkg": {
+    "scripts": [
+      "lib/**/*.js",
+      "node_modules/logform/*.js"
+    ]
   }
 }
