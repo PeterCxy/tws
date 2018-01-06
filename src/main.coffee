@@ -3,6 +3,8 @@ import * as log from './util/log'
 import { serverMain } from './server'
 import { clientMain } from './client'
 
+# Hack: show correct executable name after packaging with `pkg`
+# See also: Hack2
 execName = path.basename(
   if require.main.filename.startsWith '/snapshot'
   then process.argv[0]
@@ -12,10 +14,9 @@ execName = path.basename(
 process.nextTick -> main()
 
 main = ->
-  yargs = require('yargs')()
-  yargs.$0 = execName
+  yargs = require('yargs').usage '$0 <server|client> [options]'
+  yargs.$0 = execName # Hack2
   { argv } = yargs
-    .usage '$0 <server|client> [options]'
     .demandCommand()
     .command {
       command: 'server [options]',
