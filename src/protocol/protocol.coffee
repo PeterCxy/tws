@@ -1,4 +1,4 @@
-import * as crypto from 'crypto'
+import { createHmac } from 'crypto'
 import { just, generateId, parseHost } from '../util/util'
 
 # SHA256-based HMAC authentication
@@ -10,7 +10,7 @@ import { just, generateId, parseHost } from '../util/util'
 # authentication.
 authenticate = (passwd, data) ->
   new Promise (resolve) ->
-    hmac = crypto.createHmac('sha256', passwd)
+    hmac = createHmac 'sha256', passwd
     hmac.on 'readable', ->
       data = hmac.read()
       resolve data.toString('base64') if data?
