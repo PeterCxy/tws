@@ -38,6 +38,8 @@ main = ->
     .help 'h'
     .alias 'h', 'help'
     .describe 'h', 'Print help information'
+    .default 'heartbeat', 10
+    .describe 'heartbeat', 'Interval (in seconds) to send heartbeat packets'
 
 serverArgs = (yargs) ->
   yargs

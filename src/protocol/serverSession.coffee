@@ -25,7 +25,7 @@ import RemoteSession from './remoteSession'
   reason of such design.
 ###
 export default class ServerSession
-  constructor: (@passwd, @conn) ->
+  constructor: (@heartbeatInterval, @passwd, @conn) ->
     @proxyConns = {}
     @stage = 0
     @targetHost = null
@@ -74,7 +74,7 @@ export default class ServerSession
 
     # Enable heartbeat packets
     if not @timer?
-      @timer = protocol.heartbeat @conn, @connClose
+      @timer = protocol.heartbeat @heartbeatInterval, @conn, @connClose
 
   processRequest: (msg) =>
     # Test if the request is a payload

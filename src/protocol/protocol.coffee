@@ -20,7 +20,7 @@ authenticate = (passwd, data) ->
 # Perform heartbeat to avoid connection being stalled
 # Returns a Timer object. This timer should be cancelled
 # when the websocket is closed or closed by this function
-export heartbeat = (webSocket, onClose) ->
+export heartbeat = (interval, webSocket, onClose) ->
   isAlive = true
   webSocket.on 'pong', ->
     isAlive = true
@@ -31,7 +31,7 @@ export heartbeat = (webSocket, onClose) ->
       return
     isAlive = false
     webSocket.ping '', false, true
-  setInterval checker, 10000 # TODO: allow changing this interval
+  setInterval checker, interval * 1000
 
 ###
   Client: first handshake packet

@@ -18,10 +18,11 @@ import { logger } from '../util/log'
   is separated into ClientSession.
 ###
 export default class LocalSession
-  constructor: (@concurrency, @localAddr, @localPort, @server, @passwd, @targetHost, @targetPort) ->
+  constructor: (@concurrency, @heartbeatInterval, @localAddr,
+                @localPort, @server, @passwd, @targetHost, @targetPort) ->
     # Create all the concurrent WebSocket sessions to the server
     @wsPool = [0..(@concurrency - 1)].map (index) =>
-      new ClientSession index, @server, @passwd, @targetHost, @targetPort
+      new ClientSession index, @heartbeatInterval, @server, @passwd, @targetHost, @targetPort
 
     # Create the local server
     @socket = net.createServer @onNewClient

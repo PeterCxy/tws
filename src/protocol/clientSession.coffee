@@ -14,7 +14,7 @@ import * as protocol from './protocol'
   multiplexed.
 ###
 export default class ClientSession
-  constructor: (@index, @server, @passwd, @targetHost, @targetPort) ->
+  constructor: (@index, @heartbeatInterval, @server, @passwd, @targetHost, @targetPort) ->
     @connect()
 
   isReady: => @ready
@@ -69,7 +69,7 @@ export default class ClientSession
   onReceive: (msg) =>
     # Enable heartbeat if this is the first received packet
     if not @timer?
-      @timer = protocol.heartbeat @socket, @onWsClose
+      @timer = protocol.heartbeat @heartbeatInterval, @socket, @onWsClose
       logger.info "[#{@index}] session ready."
 
     # If we receive anything from the server
