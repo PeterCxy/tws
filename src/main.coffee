@@ -38,6 +38,7 @@ main = ->
     .help 'h'
     .alias 'h', 'help'
     .describe 'h', 'Print help information'
+    .number 'heartbeat'
     .default 'heartbeat', 10
     .describe 'heartbeat', 'Interval (in seconds) to send heartbeat packets'
 
