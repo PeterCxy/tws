@@ -10,6 +10,6 @@ export clientMain = (argv) ->
   [localHost, localPort] = parsedListen
   [remoteHost, remotePort] = parsedRemote
   new LocalSession(
-    argv.concurrency, argv.heartbeat, localHost, localPort,
+    argv.concurrency, argv.heartbeat, argv.retry, localHost, localPort,
     argv.server, argv.password, remoteHost, remotePort
   )

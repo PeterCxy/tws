@@ -67,6 +67,9 @@ clientArgs = (yargs) ->
     .number 'c'
     .default 'c', 2
     .describe 'c', 'The number of WebSocket connections to maintain.'
+    .number 'retry'
+    .default 'retry', 1
+    .describe 'retry', 'Interval (in seconds) between retries if connection failed'
     .demandOption ['l', 's', 'r', 'k']
 
 execute = (command) -> (argv) ->

@@ -14,7 +14,8 @@ import * as protocol from './protocol'
   multiplexed.
 ###
 export default class ClientSession
-  constructor: (@index, @heartbeatInterval, @server, @passwd, @targetHost, @targetPort) ->
+  constructor: (@index, @heartbeatInterval, @retryInterval,
+                @server, @passwd, @targetHost, @targetPort) ->
     @connect()
 
   isReady: => @ready
@@ -63,8 +64,7 @@ export default class ClientSession
     # Retry connection
     setTimeout(() =>
       @connect()
-    , 1000)
-    # TODO: allow customizing this timeout
+    , @retryInterval * 1000)
 
   onReceive: (msg) =>
     # Enable heartbeat if this is the first received packet
