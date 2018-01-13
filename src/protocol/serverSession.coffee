@@ -25,7 +25,7 @@ import RemoteSession from './remoteSession'
   reason of such design.
 ###
 export default class ServerSession
-  constructor: (@heartbeatInterval, @passwd, @conn) ->
+  constructor: (@heartbeatInterval, @authTimeout, @passwd, @conn) ->
     @proxyConns = {}
     @stage = 0
     @targetHost = null
@@ -60,7 +60,7 @@ export default class ServerSession
       @processRequest msg
 
   serverHandshake: (msg) =>
-    target = await protocol.parseHandshakePacket @passwd, msg
+    target = await protocol.parseHandshakePacket @authTimeout, @passwd, msg
     if not (target? and target.length is 2) # Close immediately for unknown packets
       logger.warn "Unrecognized client. Disconnecting."
       @conn.close 1002

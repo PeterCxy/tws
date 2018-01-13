@@ -48,6 +48,9 @@ serverArgs = (yargs) ->
     .describe 'l', 'Local address:port for WebSocket to bind to'
     .alias 'k', 'password'
     .describe 'k', 'Password for client authentication'
+    .number 'timeout'
+    .default 'timeout', 2000
+    .describe 'timeout', 'Timeout (in milliseconds) of authentication packets.'
     .demandOption ['l', 'k']
 
 clientArgs = (yargs) ->
