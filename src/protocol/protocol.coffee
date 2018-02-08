@@ -30,7 +30,7 @@ export heartbeat = (interval, webSocket, onClose) ->
       onClose()
       return
     isAlive = false
-    webSocket.ping '', false, true
+    webSocket.ping '', true, true
   setInterval checker, interval * 1000
 
 ###
